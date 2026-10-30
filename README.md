@@ -21,8 +21,6 @@ npm start
 ```
 
 ## ข้อมูลที่ใช้จริง
-
-- ต้นฉบับ: https://docs.google.com/spreadsheets/d/19Vy1EFRNE0H1crAoH_HivCDScOHRhnCAfKGDZpoArfc/edit
 - อ่านแท็บ `Project timeline 2026` และ `Project timeline 2025` ผ่าน XLSX export ของ Google โดยไม่ต้องใช้ token สำหรับไฟล์ปัจจุบัน
 - ใช้เลขวันและเดือนจากหัวปฏิทิน ปีจากชื่อแท็บ รวมข้อความและสีของแต่ละช่วงงาน รองรับ theme colors และไม่สร้าง milestone จากสีวันหยุด
 - เปิดหน้าครั้งแรกอ่านจาก server; ระหว่างเปิดหน้าเว็บจะรีเฟรชทุก 60 วินาที มีปุ่มรีเฟรชด้วยตนเอง และ server cache เพื่อไม่ดึงไฟล์ซ้ำสำหรับผู้ใช้พร้อมกัน
