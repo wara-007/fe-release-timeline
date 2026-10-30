@@ -34,3 +34,19 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Release room local state
+node_modules/
+.next/
+out/
+.env*
+!.env.example
+*.tsbuildinfo
+.DS_Store
+.vercel/
+.release-data/
+
+deployment.json
+
+# Source data stays local; never publish workbook snapshots
+/src/data/sheet-snapshot.json

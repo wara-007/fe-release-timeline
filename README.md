@@ -1,0 +1,102 @@
+# Release room — FE Timeline
+
+เว็บ Next.js สำหรับดู Timeline ของ Frontend ทั้ง App และ Web ทีมแก้ Google Sheet เดิม แล้วเว็บอ่านข้อมูลมาแสดง ไม่มี login และไม่มีการเขียนข้อมูลกลับไปที่ชีต
+
+## เปิดใช้งาน
+
+ต้องมี Node.js 20.9 ขึ้นไป
+
+```sh
+npm ci
+npm run dev
+```
+
+เปิด http://127.0.0.1:3000
+
+Production:
+
+```sh
+npm run build
+npm start
+```
+
+## ข้อมูลที่ใช้จริง
+
+- ต้นฉบับ: https://docs.google.com/spreadsheets/d/19Vy1EFRNE0H1crAoH_HivCDScOHRhnCAfKGDZpoArfc/edit
+- อ่านแท็บ `Project timeline 2026` และ `Project timeline 2025` ผ่าน XLSX export ของ Google โดยไม่ต้องใช้ token สำหรับไฟล์ปัจจุบัน
+- ใช้เลขวันและเดือนจากหัวปฏิทิน ปีจากชื่อแท็บ รวมข้อความและสีของแต่ละช่วงงาน รองรับ theme colors และไม่สร้าง milestone จากสีวันหยุด
+- เปิดหน้าครั้งแรกอ่านจาก server; ระหว่างเปิดหน้าเว็บจะรีเฟรชทุก 60 วินาที มีปุ่มรีเฟรชด้วยตนเอง และ server cache เพื่อไม่ดึงไฟล์ซ้ำสำหรับผู้ใช้พร้อมกัน
+- อ่านไม่สำเร็จจะเก็บข้อมูลล่าสุดพร้อมคำเตือน หากเริ่มต้นอ่านไม่ได้จะใช้ snapshot ที่บันทึกจากไฟล์จริง พร้อมเวลาและป้ายแยกจากข้อมูลสด
+- สถานะที่ไม่ระบุยังเป็น `unknown` วันที่ผ่านไปไม่ถือว่า Done หรือ Deployed
+- หน้าแรกเน้นช่วงปัจจุบัน/อนาคต งานไม่มีวันยังแสดงไว้ให้ทีมเติมแผน งานที่วันตามแผนผ่านไปแล้วดูได้ใน History > แผนที่ผ่านมา โดยไม่อ้างว่า deploy แล้ว
+- Platform อ่านจากชื่องานและ App release ที่มีวันที่; override ได้ด้วย Note
+- รออ่าน style จาก conditional formatting: รุ่นนี้ใช้สี fill ที่ export มาใน XLSX หากเปลี่ยนชีตเป็นกติกาสีอัตโนมัติควรตรวจผลเทียบต้นฉบับ
+
+## ระบุรอบ release, สถานะ และ image ใน Sheet เดิม
+
+รุ่นนี้ไม่แก้ชีตให้และไม่เพิ่มแท็บ ใช้ **Insert note / แทรกบันทึก ที่เซลล์ชื่องานในคอลัมน์ A** ได้ เมื่อต้องการระบุข้อมูลเพิ่มเติม:
+
+```text
+release: Release 1
+stream: web-main
+status: Done
+image: web:release-001
+platform: web
+owner: ชื่อผู้รับผิดชอบ
+```
+
+ข้อความข้างต้นเป็นตัวอย่างรูปแบบ ไม่ใช่ข้อมูลจริงของชีต
+
+ทุกงานในรอบต้องระบุ `release` และ `stream` เดียวกัน ตัวอย่าง Release 1 มีสามงาน ให้ใส่ Note ระบุ Release 1 ในทั้งสามงาน ใช้ image เดียวกันได้
+
+สถานะที่รองรับ:
+
+| สถานะ | ความหมาย |
+|---|---|
+| Planned | กำหนดงานที่จะเข้ารอบ |
+| Merging | กำลังรวมโค้ด |
+| Testing | กำลังทดสอบ build |
+| Done | รวมโค้ดครบและเทสผ่าน |
+| Deployed / Released | ยืนยันว่า deploy production แล้ว |
+
+- รอบจะเป็น Done เมื่อทุกงานเป็น Done หรือ Deployed และเป็น Deployed เมื่อทุกงานเป็น Deployed
+- Release 2 จะแสดงว่าเริ่ม merge ได้เมื่อ Release 1 ใน stream เดียวกันเป็น Done หรือ Deployed
+- ลำดับรอบใช้ตำแหน่งแถวแรกของแต่ละรอบในชีต ต้องเรียง Release 1 ก่อน Release 2 งานในหนึ่งรอบอาจอยู่หลายแถว
+- ไม่มีข้อมูลรอบก่อนหน้าหรือ stream จะแสดงว่า “ยังตรวจสอบไม่ได้” ไม่สรุปว่า merge ได้
+- วันตรงกันอย่างเดียวไม่ถูกสร้างเป็นรอบเดียวกัน การจัดกลุ่มอัตโนมัติใช้ version, วัน release และ platform ที่ตรงกัน และไม่ใช้เพื่อยืนยันสิทธิ์เริ่ม merge
+- `Done` ที่อยู่ในชื่องานเดิมเป็นเพียงข้อความจากต้นฉบับ ไม่ถือเป็นสถานะรอบ release
+- การ์ด “พร้อมส่งต่อให้ SA” ต้องมีทั้ง Done และ image/build
+- งาน Web/App ที่แยก artifact หรือกำหนดส่ง ให้แยก stream/record ตามการทำงานจริง
+
+## การเชื่อมข้อมูลและ deploy
+
+แอปนี้ใช้ Node.js server จริง เพราะต้องอ่าน XLSX โดยไม่ขึ้นกับ CORS ของเบราว์เซอร์ Deploy บน Vercel ด้วย framework `Next.js` หรือโฮสต์ Node/Docker ที่รองรับ Next.js ได้ ไม่ใช่ static-only HTML
+
+ไฟล์ปัจจุบันอ่าน public export ได้ ไม่ได้เปลี่ยนสิทธิ์แชร์ของ Google Sheet หากภายหลังเปลี่ยนเป็น private ให้ตั้งค่าเฉพาะฝั่ง server ตาม `.env.example` และแชร์ไฟล์ read-only ให้ service account:
+
+- `GOOGLE_SERVICE_ACCOUNT_EMAIL`
+- `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`
+
+ห้ามใช้ `NEXT_PUBLIC_` กับ credential และไม่ต้องให้ผู้ชมเว็บล็อกอิน Google
+
+Snapshot fallback เป็นข้อมูลจริงที่มีเวลา ไม่ใช่ข้อมูลสาธิต อัปเดตไฟล์ fallback ด้วย `npm run snapshot:update` และ deploy ใหม่เมื่อจำเป็น ข้อมูลสดไม่ต้อง deploy ใหม่เมื่อทีมแก้ชีต
+
+## ตรวจสอบ
+
+```sh
+npm test
+npm run typecheck
+npm run build
+```
+
+Tests ครอบคลุมการอ่านช่วงวันและสี, theme/holiday, งานไม่มีวันที่, DevBE ที่ไม่ควรถูกสร้างเป็น feature, การจัดกลุ่มหลายงาน, Done/Deployed, การเริ่ม merge ตาม stream, Platform และวันปัจจุบัน Asia/Bangkok
+
+## Image / App build ที่กรอกจากเว็บ
+
+หน้ารายละเอียด release และ feature มีช่องกรอกพร้อมปุ่มบันทึก ใช้ API `/api/builds` และบันทึกแบบ atomic ใน `.release-data/builds.json` บน server เปิดหน้าใหม่หรือ restart server แล้วข้อมูลยังอยู่ ไม่เขียนกลับ Sheet และไม่ใช้ localStorage
+
+กำหนด `RELEASE_DATA_DIRECTORY` เพื่อใช้ persistent disk ที่โฮสต์จัดเตรียมไว้ ห้ามใช้ file storage นี้บน serverless เช่น Vercel โดยตรง เพราะ filesystem ไม่ใช่ durable shared storage; ก่อน deploy แบบนั้นต้องเปลี่ยน adapter เป็น database/storage ถาวร การบันทึกไม่มี login ตามขอบเขตปัจจุบัน ผู้ที่เปิดเว็บได้จะแก้เลข build ได้
+
+## Repository data policy
+
+สำเนาชีต `src/data/sheet-snapshot.json` เก็บเฉพาะบนเครื่อง ไม่รวมใน Git หรือประวัติที่ push ขึ้น repository public แอปอ่านชีตสดได้ตามเดิม หากต้องการ fallback บนเครื่อง ให้รัน `npm run snapshot:update` ไฟล์ที่สร้างจะถูก ignore อัตโนมัติ หากอ่านสดไม่ได้และไม่มี fallback เว็บจะแสดงข้อผิดพลาดแทนการแสดงข้อมูลสมมุติ
