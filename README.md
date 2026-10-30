@@ -89,11 +89,26 @@ npm run build
 
 Tests ครอบคลุมการอ่านช่วงวันและสี, theme/holiday, งานไม่มีวันที่, DevBE ที่ไม่ควรถูกสร้างเป็น feature, การจัดกลุ่มหลายงาน, Done/Deployed, การเริ่ม merge ตาม stream, Platform และวันปัจจุบัน Asia/Bangkok
 
-## Image / App build ที่กรอกจากเว็บ
+## Image / App build ที่กรอกจากเว็บ — Supabase
 
-หน้ารายละเอียด release และ feature มีช่องกรอกพร้อมปุ่มบันทึก ใช้ API `/api/builds` และบันทึกแบบ atomic ใน `.release-data/builds.json` บน server เปิดหน้าใหม่หรือ restart server แล้วข้อมูลยังอยู่ ไม่เขียนกลับ Sheet และไม่ใช้ localStorage
+บันทึกจริงใน Supabase project `rxqffuavqnxlgmjoolzn` ตาราง `public.fe_release_builds` แทนไฟล์บนเครื่อง ข้อมูลแชร์กันทุกเครื่องและยังอยู่หลัง restart/deploy ใหม่ ไม่มีการแก้ Google Sheets
 
-กำหนด `RELEASE_DATA_DIRECTORY` เพื่อใช้ persistent disk ที่โฮสต์จัดเตรียมไว้ ห้ามใช้ file storage นี้บน serverless เช่น Vercel โดยตรง เพราะ filesystem ไม่ใช่ durable shared storage; ก่อน deploy แบบนั้นต้องเปลี่ยน adapter เป็น database/storage ถาวร การบันทึกไม่มี login ตามขอบเขตปัจจุบัน ผู้ที่เปิดเว็บได้จะแก้เลข build ได้
+ตั้งค่าฝั่ง server ใน `.env.local` (ถูก ignore โดย Git):
+
+```text
+SUPABASE_URL=https://rxqffuavqnxlgmjoolzn.supabase.co
+SUPABASE_PUBLISHABLE_KEY=<publishable key ของโปรเจกต์>
+```
+
+ค่าเหล่านี้ไม่ใช้ `NEXT_PUBLIC_` แอปเรียกผ่าน Next.js `/api/builds` ซึ่งตรวจ input และ same-origin ก่อน upsert ผ่าน Supabase Data API ไม่มี SDK dependency และไม่มี admin/service key
+
+โมเดลปัจจุบันยังไม่ล็อกอินตามคำขอ: เปิด RLS พร้อม SELECT/INSERT/UPDATE policies สำหรับ shared anonymous editing เฉพาะตารางนี้ ไม่ grant DELETE หากภายหลังต้องจำกัดผู้แก้ไข ต้องเพิ่ม authentication/authorization ที่ API และ RLS ร่วมกัน การเก็บ publishable key เฉพาะ server ไม่ใช่การยืนยันตัวผู้ใช้
+
+Migration ที่ apply จริง: `supabase/migrations/20261030081417_create_fe_release_builds.sql` ชื่อ `create_fe_release_builds` ไม่มีข้อมูลชีตหรือเลข build จริงใน migration
+
+ถ้าอ่านหรือบันทึกฐานข้อมูลไม่ได้ API จะส่ง error โดยไม่ fallback ไปไฟล์เงียบ ๆ และปุ่มบันทึกจะรอให้โหลดข้อมูลเดิมสำเร็จก่อน ไม่มีข้อมูล local file เดิมให้ย้ายในตอนเชื่อมต่อ
+
+ข้อจำกัดเดิม: record ID ของ feature ยังผูกกับเลขแถวในชีต ส่วน release ที่ไม่ได้ระบุ ID ผูกกับกลุ่มแผน หลีกเลี่ยงย้ายแถว/เปลี่ยนกลุ่มขณะมี build บันทึกไว้จนกว่าจะเพิ่มการจับคู่ ID ถาวร ขั้นตอนนี้เปลี่ยนเฉพาะที่เก็บข้อมูล ไม่เปลี่ยนการจับคู่งาน
 
 ## Repository data policy
 

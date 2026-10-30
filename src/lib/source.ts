@@ -53,7 +53,7 @@ export async function getTimeline(force = false): Promise<TimelineData> {
       const checkedAt = new Date().toISOString();
       if (cache) cache = { ...cache, source: { ...cache.source, mode: 'cached', checkedAt, warning: 'อ่านชีตครั้งล่าสุดไม่สำเร็จ กำลังแสดงข้อมูลที่อ่านสำเร็จครั้งก่อน' } };
       else {
-        const snapshot = JSON.parse(await readFile(process.env.TIMELINE_SNAPSHOT_PATH || path.join(process.cwd(), 'src/data/sheet-snapshot.json'), 'utf8')) as { capturedAt: string; sheets: GridSheet[] };
+        const snapshot = JSON.parse(await readFile(/* turbopackIgnore: true */ process.env.TIMELINE_SNAPSHOT_PATH || path.join(process.cwd(), 'src/data/sheet-snapshot.json'), 'utf8')) as { capturedAt: string; sheets: GridSheet[] };
         if (ID !== '19Vy1EFRNE0H1crAoH_HivCDScOHRhnCAfKGDZpoArfc') throw new Error('อ่านชีตที่ตั้งค่าไว้ไม่ได้ และไม่มีข้อมูลสำรองของชีตนี้');
         const features = parseSheets(snapshot.sheets);
         cache = { features, releases: buildReleases(features), source: { mode: 'snapshot', fetchedAt: snapshot.capturedAt, checkedAt, url: URL, warning: 'ยังเชื่อมชีตสดไม่ได้ กำลังแสดงสำเนาข้อมูลจริงตามเวลาที่ระบุ' } };
