@@ -20,3 +20,17 @@ Remaining limitation: anonymous editing intentional; feature/release keys retain
 Root cause: detail drawer overlaid Supabase values, but cards/ready metrics still consumed raw Sheet releases.
 Implemented shared immutable mergeSavedBuilds projection: explicit release image overrides feature aggregate; feature builds propagate into release cards; explicit empty values clear old values; selected details resolve fresh projection.
 Regression tests added for release/feature saves, precedence, clearing and source preservation. Verification pending. No database or Sheet writes needed for this fix.
+## 2026-10-31 — Image / Build history
+
+- เพิ่ม contrast ของข้อความหลักและข้อความประกอบให้ชัดขึ้น
+- การบันทึก Image / App build รองรับ comment และเก็บประวัติแบบ append-only ใน Supabase
+- การ์ด Release แสดงเลขล่าสุดและมีปุ่ม copy โดยไม่ต้องเปิดรายละเอียด
+- หน้ารายละเอียดแสดงเลขล่าสุดและประวัติย้อนหลังพร้อม comment/เวลา
+- Google Sheets ยังคงเป็น read-only และไม่ได้รับการแก้ไขจากเว็บ
+
+## 2026-10-31 — Release status editor
+
+- เลือกและบันทึกสถานะ Release ได้จาก Release details
+- สถานะล่าสุดเก็บใน Supabase แยกจาก Google Sheets
+- การ์ด Release, readiness และตัวเลขพร้อมส่งต่อ SA ใช้สถานะล่าสุดจาก Supabase
+

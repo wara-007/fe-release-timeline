@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDown, ArrowRight, ArrowUpRight, CalendarDays, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CircleHelp, Clock3, Copy, ExternalLink, FileSpreadsheet, GitBranch, History, Layers3, LayoutGrid, ListFilter, Menu, Monitor, Package, PanelLeftClose, RefreshCw, Rocket, Search, ShieldCheck, Smartphone, Sparkles, Timer, X } from 'lucide-react';
 import { mergeSavedBuilds } from '@/lib/build-view';
+import type { BuildData, BuildRecord } from '@/lib/build-types';
+import { mergeSavedReleaseStatuses } from '@/lib/release-status-view';
 import type { Feature, Platform, Release, Stage, Status, TimelineData } from '@/lib/types';
 import { addDays, bangkokToday, canStartMerge, daysBetween, featureDate, formatDate, PLATFORM_LABEL, selectFeatures, sourceLink, STAGE_LABEL, STATUS_LABEL } from '@/lib/timeline';
 
@@ -26,15 +28,29 @@ function stageTitle(stage: Stage) {
 
 export default function Dashboard({ initialData }: { initialData: TimelineData }) {
   const [data, setData] = useState(initialData);
-  const [savedBuilds, setSavedBuilds] = useState<Record<string, string>>({});
-  const mergedData = useMemo(() => mergeSavedBuilds(data, savedBuilds), [data, savedBuilds]);
+  const [buildData, setBuildData] = useState<BuildData>({ latest: {}, history: {} });
+  const savedBuilds = useMemo(() => Object.fromEntries(Object.entries(buildData.latest).map(([id, record]) => [id, record.image])), [buildData.latest]);
+  const [savedStatuses, setSavedStatuses] = useState<Record<string, Status>>({});
+  const mergedData = useMemo(() => mergeSavedReleaseStatuses(mergeSavedBuilds(data, savedBuilds), savedStatuses), [data, savedBuilds, savedStatuses]);
   const [buildsError, setBuildsError] = useState('');
   const [buildsLoaded, setBuildsLoaded] = useState(false);
+  const [statusesError, setStatusesError] = useState('');
+  const [statusesLoaded, setStatusesLoaded] = useState(false);
   useEffect(() => {
     let active = true;
     const load = async () => {
-      try { const response = await fetch('/api/builds', {cache:'no-store'}); if (!response.ok) throw new Error(); const values = await response.json(); if(active){setSavedBuilds(values);setBuildsLoaded(true);setBuildsError('');} }
+      try { const response = await fetch('/api/builds', {cache:'no-store'}); if (!response.ok) throw new Error(); const values = await response.json() as BuildData; if(active){setBuildData(values);setBuildsLoaded(true);setBuildsError('');} }
       catch { if(active)setBuildsError('อ่าน Image / Build จาก Supabase ไม่สำเร็จ กรุณารีเฟรชก่อนแก้ข้อมูล'); }
+    };
+    void load();
+    const timer=setInterval(()=>{if(document.visibilityState==='visible')void load();},60000);
+    return ()=>{active=false;clearInterval(timer);};
+  }, []);
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      try { const response = await fetch('/api/release-statuses', {cache:'no-store'}); if (!response.ok) throw new Error(); const values = await response.json() as Record<string, Status>; if(active){setSavedStatuses(values);setStatusesLoaded(true);setStatusesError('');} }
+      catch { if(active)setStatusesError('อ่านสถานะ Release จาก Supabase ไม่สำเร็จ กรุณารีเฟรชก่อนแก้สถานะ'); }
     };
     void load();
     const timer=setInterval(()=>{if(document.visibilityState==='visible')void load();},60000);
@@ -130,6 +146,7 @@ export default function Dashboard({ initialData }: { initialData: TimelineData }
         <div className="page-heading"><div><div className="eyebrow"><span /> ONE PLAN. EVERY RELEASE.</div><h1>{view === 'history' ? 'Release history' : view === 'releases' ? 'Release board' : 'FE release timeline'}<span className="year-pill">{year === 'all' ? 'ALL YEARS' : year}</span></h1><p>{view === 'history' ? 'ย้อนดูแผนที่ผ่านมา และรอบที่ทีมยืนยันว่า deploy แล้ว' : 'เห็นแผนเดียวกัน ตั้งแต่เริ่มพัฒนา จนถึงวันที่ปล่อย App และ Web'}</p></div><a className="sheet-button" href={data.source.url} target="_blank" rel="noreferrer"><FileSpreadsheet size={16} />เปิดต้นฉบับ Sheet<ArrowUpRight size={15} /></a></div>
         <div className="sync-line"><span className={`live-dot ${data.source.mode === 'live' ? '' : 'warning-dot'}`} /><b>{data.source.mode === 'live' ? 'เชื่อมต่อ Google Sheets แล้ว' : data.source.mode === 'cached' ? 'ข้อมูลที่อ่านสำเร็จล่าสุด' : 'สำเนาข้อมูลจาก Sheet'}</b><span className="sync-dot">·</span><span>อัปเดต <ClockText value={data.source.fetchedAt} /> น.</span><button onClick={() => void refresh(true)} disabled={refreshing} className="refresh-link"><RefreshCw size={12} className={refreshing ? 'spin' : ''} />{refreshing ? 'กำลังอัปเดต' : 'รีเฟรช'}</button></div>
         {buildsError && <div className="warning-banner" role="alert">{buildsError}<button onClick={() => window.location.reload()}>รีเฟรช</button></div>}
+        {statusesError && <div className="warning-banner" role="alert">{statusesError}<button onClick={() => window.location.reload()}>รีเฟรช</button></div>}
         {(refreshError || data.source.warning) && <div className="warning-banner" role="status"><Clock3 size={16} />{refreshError || data.source.warning}</div>}
 
         <section className="metrics" aria-label="ภาพรวมแผนงาน">
@@ -148,7 +165,7 @@ export default function Dashboard({ initialData }: { initialData: TimelineData }
           {view === 'history' && <div className="history-controls"><div className="segmented"><button className={historyMode === 'plans' ? 'selected' : ''} onClick={() => setHistoryMode('plans')}>แผนที่ผ่านมา</button><button className={historyMode === 'deployed' ? 'selected' : ''} onClick={() => setHistoryMode('deployed')}>ยืนยัน Deployed แล้ว</button></div><p>{historyMode === 'plans' ? 'วันที่ตามแผนผ่านไปแล้ว ยังไม่ถือว่า deploy สำเร็จจนกว่าทีมจะยืนยัน' : 'แสดงเฉพาะงานที่มีสถานะ Deployed หรือ Released ในชีต'}</p></div>}
 
           {view === 'timeline' && <><div className="timeline-toolbar"><div className="date-navigator"><button className="icon-button" aria-label="ช่วงก่อนหน้า" onClick={() => setAnchor(addDays(anchor, -28))}><ChevronLeft size={16} /></button><span>{formatDate(anchor)} – {formatDate(addDays(anchor, weeks * 7 - 1), true)}</span><button className="icon-button" aria-label="ช่วงถัดไป" onClick={() => setAnchor(addDays(anchor, 28))}><ChevronRight size={16} /></button><button className="today-button" onClick={() => setAnchor(addDays(monday(today), -7))}>วันนี้</button></div><div className="timeline-controls"><div className="legend">{LEGEND.filter(k => k !== 'integration').map(kind => <span key={kind}><i className={`legend-dot ${kind}`} />{kind === 'dev' ? 'Dev FE' : kind === 'production' ? 'Deploy' : kind === 'release' ? 'Release' : STAGE_LABEL[kind]}</span>)}</div><select aria-label="จำนวนสัปดาห์ที่แสดง" value={weeks} onChange={e => setWeeks(Number(e.target.value))}><option value={4}>4 สัปดาห์</option><option value={8}>8 สัปดาห์</option><option value={12}>12 สัปดาห์</option></select></div></div><Timeline features={shown} anchor={anchor} weeks={weeks} today={today} onSelect={showFeature} /></>}
-          {view === 'releases' && <div className="release-grid">{relevantReleases.map(release => <ReleaseCard key={release.id} release={release} all={mergedData.releases} onOpen={() => setSelected(release)} />)}</div>}
+          {view === 'releases' && <div className="release-grid">{relevantReleases.map(release => <ReleaseCard key={release.id} release={release} all={mergedData.releases} onOpen={() => setSelected(release)} onCopy={copyImage} />)}</div>}
           {view === 'history' && <div className="history-list">{historyFeatures.map(feature => <button key={feature.id} className="history-row" onClick={() => showFeature(feature)}><span className="history-icon"><History size={17} /></span><span className="history-name"><b>{feature.title}</b><small>{feature.sheetTitle} · {feature.version || 'ยังไม่ระบุ version'}</small></span><PlatformBadge platform={feature.platform} /><span className="history-date">{formatDate(featureDate(feature) || endOf(feature), true)}</span><StatusBadge status={feature.status} /><ChevronRight size={16} /></button>)}</div>}
           {!shown.length && <div className="empty-state"><span><Search size={25} /></span><h3>{view === 'history' && historyMode === 'deployed' ? 'ยังไม่มีการยืนยัน Deployed ในชีต' : 'ไม่พบงานในมุมมองนี้'}</h3><p>{view === 'history' && historyMode === 'deployed' ? 'เมื่อทีมระบุสถานะแล้ว งานจะแสดงเป็นประวัติที่นี่' : 'ลองเปลี่ยนตัวกรอง หรือเปิดดูแผนที่ผ่านมา'}</p><button onClick={resetFilters}>ล้างตัวกรอง</button></div>}
           <div className="table-footer"><span><FileSpreadsheet size={13} />ข้อมูลจาก {year === 'all' ? 'Project timeline ทุกปี' : `Project timeline ${year}`}</span><span>คลิกที่งานเพื่อดูรายละเอียด <ArrowUpRight size={12} /></span></div>
@@ -158,7 +175,7 @@ export default function Dashboard({ initialData }: { initialData: TimelineData }
         <footer className="page-footer"><span>Release room<span>·</span>One source of truth for your team.</span><span><span className="live-dot" />Google Sheets เป็นข้อมูลหลัก</span></footer>
       </main>
     </div>
-    {selected && <DetailDrawer selected={('features' in selected ? mergedData.releases.find(item => item.id === selected.id) : mergedData.features.find(item => item.id === selected.id)) || selected} all={mergedData.releases} onClose={() => setSelected(null)} onCopy={copyImage} onFeature={showFeature} buildsLoaded={buildsLoaded} savedBuilds={savedBuilds} onSaved={(id, image) => setSavedBuilds(values => ({...values, [id]: image}))} />}
+    {selected && <DetailDrawer selected={('features' in selected ? mergedData.releases.find(item => item.id === selected.id) : mergedData.features.find(item => item.id === selected.id)) || selected} all={mergedData.releases} onClose={() => setSelected(null)} onCopy={copyImage} onFeature={showFeature} buildsLoaded={buildsLoaded} buildData={buildData} onSaved={(record) => setBuildData(values => ({ latest: {...values.latest, [record.recordId]: record}, history: {...values.history, [record.recordId]: [record, ...(values.history[record.recordId] || [])]} }))} statusesLoaded={statusesLoaded} onStatusSaved={(id, status) => setSavedStatuses(values => ({...values, [id]:status}))} />}
     {help && <HelpDrawer onClose={() => setHelp(false)} sourceUrl={data.source.url} />}
     {toast && <div className="toast" role="status"><Check size={16} />{toast}</div>}
   </div>;
@@ -188,9 +205,10 @@ function Timeline({ features, anchor, weeks, today, onSelect }: { features: Feat
   </div></div>;
 }
 
-function ReleaseCard({ release, all, onOpen }: { release: Release; all: Release[]; onOpen: () => void }) {
+function ReleaseCard({ release, all, onOpen, onCopy }: { release: Release; all: Release[]; onOpen: () => void; onCopy: (text: string) => void }) {
   const readiness = canStartMerge(release, all);
-  return <button className="release-card" onClick={onOpen}><div className="release-card-top"><span className="release-package"><Package size={19} /></span><StatusBadge status={release.status} /></div><span className="release-type">{release.explicit ? 'RELEASE ROUND' : 'GROUPED BY SHEET PLAN'}</span><h3>{release.name}</h3><div className="release-date"><CalendarDays size={14} />{formatDate(release.date, true)}</div><div className="release-features">{release.features.slice(0, 3).map(f => <span key={f.id}><i />{f.title}</span>)}{release.features.length > 3 && <small>+ อีก {release.features.length - 3} งาน</small>}</div><div className="release-image"><Package size={13} /><code title={release.images.join(' · ')}>{release.images[0] || 'ยังไม่มีเลข image / build'}</code>{release.images.length > 1 && <small>+{release.images.length - 1}</small>}</div><div className={`readiness ${readiness.allowed === true ? 'ready' : ''}`}><GitBranch size={13} /><span>{readiness.reason}</span><ChevronRight size={14} /></div></button>;
+  const latest = release.images[0];
+  return <article className="release-card"><button className="release-card-main" onClick={onOpen}><div className="release-card-top"><span className="release-package"><Package size={19} /></span><StatusBadge status={release.status} /></div><span className="release-type">{release.explicit ? 'RELEASE ROUND' : 'GROUPED BY SHEET PLAN'}</span><h3>{release.name}</h3><div className="release-date"><CalendarDays size={14} />{formatDate(release.date, true)}</div><div className="release-features">{release.features.slice(0, 3).map(f => <span key={f.id}><i />{f.title}</span>)}{release.features.length > 3 && <small>+ อีก {release.features.length - 3} งาน</small>}</div></button><div className={`release-image ${latest ? 'has-image' : ''}`}><Package size={13} /><code title={release.images.join(' · ')}>{latest || 'ยังไม่มีเลข image / build'}</code>{release.images.length > 1 && <small>+{release.images.length - 1}</small>}{latest && <button className="card-copy" aria-label={`คัดลอก ${latest}`} title="คัดลอกเลขล่าสุด" onClick={() => void onCopy(latest)}><Copy size={14} /></button>}</div><button className={`readiness ${readiness.allowed === true ? 'ready' : ''}`} onClick={onOpen}><GitBranch size={13} /><span>{readiness.reason}</span><ChevronRight size={14} /></button></article>;
 }
 
 function DrawerShell({ children, onClose, label }: { children: React.ReactNode; onClose: () => void; label: string }) {
@@ -216,16 +234,20 @@ function DrawerShell({ children, onClose, label }: { children: React.ReactNode; 
   return <div className="drawer-overlay"><button className="drawer-backdrop" aria-label="ปิดรายละเอียด" onClick={onClose} /><section className="drawer" role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} ref={panel}><div className="drawer-top"><span><Layers3 size={16} />{label}</span><button className="icon-button" aria-label="ปิดรายละเอียด" onClick={onClose}><X size={20} /></button></div>{children}</section></div>;
 }
 
-function DetailDrawer({ selected, all, onClose, onCopy, onFeature, buildsLoaded, savedBuilds, onSaved }: { selected: Feature | Release; all: Release[]; onClose: () => void; onCopy: (text: string) => void; onFeature: (feature: Feature) => void; buildsLoaded: boolean; savedBuilds: Record<string, string>; onSaved: (id: string, image: string) => void }) {
+function DetailDrawer({ selected, all, onClose, onCopy, onFeature, buildsLoaded, buildData, onSaved, statusesLoaded, onStatusSaved }: { selected: Feature | Release; all: Release[]; onClose: () => void; onCopy: (text: string) => void; onFeature: (feature: Feature) => void; buildsLoaded: boolean; buildData: BuildData; onSaved: (record: BuildRecord) => void; statusesLoaded:boolean; onStatusSaved:(id:string,status:Status)=>void }) {
   const isRelease = 'features' in selected;
-  const images = savedBuilds[selected.id] !== undefined ? (savedBuilds[selected.id] ? [savedBuilds[selected.id]] : []) : (isRelease ? selected.images : selected.image ? [selected.image] : []);
+  const latest = buildData.latest[selected.id];
+  const images = latest ? [latest.image] : (isRelease ? selected.images : selected.image ? [selected.image] : []);
+  const history = buildData.history[selected.id] || [];
   const release = isRelease ? selected : all.find(r => r.features.some(f => f.id === selected.id));
   const feature = isRelease ? null : selected;
   const readiness = release ? canStartMerge(release, all) : null;
   return <DrawerShell onClose={onClose} label={isRelease ? 'Release details' : 'Feature details'}><div className="drawer-content"><div className="detail-badges"><PlatformBadge platform={selected.platform} /><StatusBadge status={selected.status} /></div><h2>{isRelease ? selected.name : selected.title}</h2><p className="detail-subtitle">{isRelease ? `${selected.features.length} งานในรอบนี้ · ${formatDate(selected.date, true)}` : `${selected.sheetTitle} · แถว ${selected.sourceRow}`}</p>
     <div className="detail-callout"><CircleHelp size={17} /><p>Done = merge ครบและเทสผ่าน<br />Deployed = ยืนยันว่าปล่อย production แล้ว</p></div>
-    <h3>Release information</h3><dl className="detail-fields"><div><dt>รอบ / Version</dt><dd>{release?.name || 'ยังไม่ระบุ'}</dd></div><div><dt>วัน release ตามแผน</dt><dd>{formatDate(isRelease ? selected.date : featureDate(selected), true)}</dd></div><div><dt>Stream</dt><dd>{selected.stream || 'ยังไม่ระบุ'}</dd></div>{feature && <div><dt>ผู้รับผิดชอบ</dt><dd>{feature.owner || 'ยังไม่ระบุ'}</dd></div>}<div><dt>สถานะในชีต</dt><dd><StatusBadge status={selected.status} /></dd></div></dl>
-    <h3>Image / App build</h3><BuildEditor disabled={!buildsLoaded} key={selected.id + (buildsLoaded ? '-loaded' : '-loading')} id={selected.id} initial={savedBuilds[selected.id] ?? (isRelease ? selected.images[0] || '' : selected.image)} onSaved={onSaved} />{images.length ? images.map(image => <div key={image} className="image-code"><Package size={16} /><code>{image}</code><button className="icon-button" aria-label="คัดลอก image" onClick={() => onCopy(image)}><Copy size={15} /></button></div>) : <div className="missing-image"><Package size={21} /><b>ยังไม่มีเลข image / build ที่บันทึกไว้</b><p>กรอกเลข image / build ด้านบนแล้วกดบันทึก</p></div>}
+    {isRelease && <><h3>สถานะ Release</h3><ReleaseStatusEditor releaseId={selected.id} initial={selected.status} disabled={!statusesLoaded} onSaved={onStatusSaved} /></>}
+    <h3>Release information</h3><dl className="detail-fields"><div><dt>รอบ / Version</dt><dd>{release?.name || 'ยังไม่ระบุ'}</dd></div><div><dt>วัน release ตามแผน</dt><dd>{formatDate(isRelease ? selected.date : featureDate(selected), true)}</dd></div><div><dt>Stream</dt><dd>{selected.stream || 'ยังไม่ระบุ'}</dd></div>{feature && <div><dt>ผู้รับผิดชอบ</dt><dd>{feature.owner || 'ยังไม่ระบุ'}</dd></div>}<div><dt>{isRelease ? 'สถานะล่าสุด' : 'สถานะในชีต'}</dt><dd><StatusBadge status={selected.status} /></dd></div></dl>
+    <h3>Image / App build</h3><BuildEditor disabled={!buildsLoaded} key={selected.id + (buildsLoaded ? '-loaded' : '-loading')} id={selected.id} initial={latest?.image ?? (isRelease ? selected.images[0] || '' : selected.image)} onSaved={onSaved} />{images.length ? images.map(image => <div key={image} className="image-code latest-image"><Package size={16} /><div><small>เลขล่าสุด</small><code>{image}</code></div><button className="icon-button" aria-label="คัดลอก image" onClick={() => onCopy(image)}><Copy size={15} /></button></div>) : <div className="missing-image"><Package size={21} /><b>ยังไม่มีเลข image / build ที่บันทึกไว้</b><p>กรอกเลข image / build ด้านบนแล้วกดบันทึก</p></div>}
+    {history.length > 0 && <><h3>ประวัติ Image / Build <span>{history.length}</span></h3><div className="build-history">{history.map((record, index) => <div className="build-history-item" key={`${record.updatedAt}-${index}`}><div className="build-history-head"><code>{record.image}</code><button className="icon-button" aria-label={`คัดลอก ${record.image}`} onClick={() => onCopy(record.image)}><Copy size={14} /></button></div>{record.comment && <p>{record.comment}</p>}<small><Clock3 size={12} /><ClockText value={record.updatedAt} /> น.</small></div>)}</div></>}
     {readiness && <div className={`merge-info ${readiness.allowed ? 'ready' : ''}`}><GitBranch size={17} /><div><b>การเริ่ม merge รอบถัดไป</b><p>{readiness.reason}</p></div></div>}
     {isRelease && <><h3>งานในรอบ release <span>{selected.features.length}</span></h3><div className="detail-feature-list">{selected.features.map(f => <button key={f.id} onClick={() => onFeature(f)}><div><b>{f.title}</b><PlatformBadge platform={f.platform} /></div><ChevronRight size={16} /></button>)}</div>{!selected.explicit && <p className="small-note">จัดกลุ่มจาก version และวัน release ในชีต ยังไม่ใช่รอบที่ทีมระบุ Release ID โดยตรง</p>}</>}
     {feature && <><h3>Timeline ของงาน</h3>{feature.stages.length ? <div className="stage-list">{feature.stages.map((s, i) => <div key={i}><span className={`stage-node ${s.kind}`} /><div><b>{STAGE_LABEL[s.kind]}{s.tentative && <span className="tentative-label">Tentative</span>}</b><p>{formatDate(s.start, true)}{s.end !== s.start && ` – ${formatDate(s.end, true)}`}</p>{s.note && <small>{s.note}</small>}</div></div>)}</div> : <p className="small-note">ชีตยังไม่ได้ระบุวันที่ของงานนี้</p>}{feature.notes.map((n, i) => <p className="small-note" key={i}>{n}</p>)}{feature.platformInferred && <p className="small-note">Platform อ่านจากชื่องานและวันที่ App release ที่กรอกไว้ หากไม่มีข้อมูลจะคงเป็น “ยังไม่ระบุ”</p>}<a className="source-detail-link" href={sourceLink(feature)} target="_blank" rel="noreferrer"><FileSpreadsheet size={16} />เปิดแถวต้นฉบับใน Sheet<ExternalLink size={14} /></a></>}
@@ -236,16 +258,32 @@ function HelpDrawer({ onClose, sourceUrl }: { onClose: () => void; sourceUrl: st
   return <DrawerShell label="วิธีใช้ Release room" onClose={onClose}><div className="drawer-content"><span className="help-hero"><FileSpreadsheet size={28} /></span><h2>แก้ที่ Sheet<br />เห็นแผนเดียวกันที่นี่</h2><p className="detail-subtitle">เว็บอ่านข้อมูลอย่างเดียว และไม่ merge หรือ deploy โค้ดให้ทีม</p><h3>สถานะของแต่ละรอบ</h3><div className="status-guide">{(['planned', 'merging', 'testing', 'done', 'deployed'] as Status[]).map((s, i) => <div key={s}><span>{i + 1}</span><div><StatusBadge status={s} /><p>{({ planned: 'กำหนดงานที่จะเอาเข้ารอบแล้ว', merging: 'ผู้รับผิดชอบกำลังรวมโค้ด', testing: 'มี build ให้ทีมทดสอบ', done: 'รวมโค้ดครบและเทสผ่าน เริ่ม merge รอบถัดไปใน stream เดียวกันได้', deployed: 'SA ยืนยันว่า deploy production แล้ว ย้ายไปประวัติ' } as Record<string, string>)[s]}</p></div></div>)}</div><h3>ใช้รูปแบบชีตเดิมได้</h3><p className="guide-text">แถบสีและข้อความในปฏิทินใช้แสดงวันตามแผน หากต้องการระบุรอบ สถานะ และ image ให้เพิ่ม Note ที่เซลล์ชื่องาน โดยไม่ต้องเพิ่มแท็บ:</p><pre className="metadata-example">{'release: Release 1\nstream: web-main\nstatus: Done\nimage: web:release-001\nplatform: web\nowner: ชื่อผู้รับผิดชอบ'}</pre><p className="small-note">ตัวอย่างรูปแบบเท่านั้น ไม่ใช่สถานะหรือ image จริง ทุกงานในรอบต้องใช้ release และ stream เดียวกัน และ Done ครบทุกงานก่อนเว็บจะแสดงว่ารอบถัดไปเริ่ม merge ได้ ลำดับรอบอ่านจากตำแหน่งในชีต</p><h3>ข้อมูลเก่าดูที่ไหน</h3><p className="guide-text">History แยก “แผนที่ผ่านมา” ออกจาก “ยืนยัน Deployed แล้ว” วันที่ผ่านไปหรือคำว่า Done ในชื่องานจะไม่ถูกตีความเป็นการ deploy</p><a className="source-detail-link" href={sourceUrl} target="_blank" rel="noreferrer"><FileSpreadsheet size={16} />เปิด Google Sheet<ExternalLink size={14} /></a></div></DrawerShell>;
 }
 
-function BuildEditor({id, initial, onSaved, disabled}: {id:string; initial:string; disabled:boolean; onSaved:(id:string,image:string)=>void}) {
+function ReleaseStatusEditor({releaseId, initial, disabled, onSaved}: {releaseId:string; initial:Status; disabled:boolean; onSaved:(id:string,status:Status)=>void}) {
+  const [value,setValue]=useState(initial);
+  const [saving,setSaving]=useState(false);
+  const [message,setMessage]=useState('');
+  useEffect(()=>setValue(initial),[initial]);
+  async function save(){
+    if(disabled || saving || value===initial)return;
+    setSaving(true);setMessage('');
+    try{const response=await fetch('/api/release-statuses',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({releaseId,status:value})});if(!response.ok)throw new Error();onSaved(releaseId,value);setMessage('บันทึกสถานะแล้ว · การ์ดอัปเดตทันที');}
+    catch{setMessage('บันทึกสถานะไม่สำเร็จ กรุณาลองใหม่');setValue(initial);}finally{setSaving(false);}
+  }
+  const options:Status[]=['unknown','planned','merging','testing','done','deployed'];
+  return <div className="release-status-editor"><div className="status-select-wrap"><StatusBadge status={value}/><select aria-label="เลือกสถานะ Release" value={value} disabled={disabled||saving} onChange={event=>setValue(event.target.value as Status)}>{options.map(status=><option key={status} value={status}>{STATUS_LABEL[status]}</option>)}</select><ChevronDown size={15}/></div><button className="primary-button" disabled={disabled||saving||value===initial} onClick={()=>void save()}>{disabled?'กำลังอ่านสถานะ...':saving?'กำลังบันทึก...':'บันทึกสถานะ'}</button><p role="status">{message}</p><small>สถานะนี้เก็บใน Supabase และใช้แสดงบนการ์ด โดยไม่แก้ Google Sheet</small></div>;
+}
+
+function BuildEditor({id, initial, onSaved, disabled}: {id:string; initial:string; disabled:boolean; onSaved:(record:BuildRecord)=>void}) {
  const [draft,setDraft]=useState<{value:string;base:string}|null>(null);
  const value=draft?.value ?? initial;
+ const [comment,setComment]=useState('');
  const conflict=draft !== null && draft.base !== initial;
  const [saving,setSaving]=useState(false); const [message,setMessage]=useState('');
  async function save(){
   if(disabled || saving || conflict)return;
   setSaving(true);setMessage('');
-  try{const response=await fetch('/api/builds',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,image:value})});if(!response.ok)throw new Error();onSaved(id,value.trim());setDraft(null);setMessage('บันทึกแล้ว · เปิดกลับมาดูได้');}
+  try{const response=await fetch('/api/builds',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,image:value,comment})});if(!response.ok)throw new Error();const result=await response.json() as {record:BuildRecord};onSaved(result.record);setDraft(null);setComment('');setMessage('บันทึกแล้ว · เพิ่มในประวัติเรียบร้อย');}
   catch{setMessage('บันทึกไม่สำเร็จ กรุณาลองใหม่');}finally{setSaving(false);}
  }
- return <div style={{marginBottom:16}}><label style={{display:'block',fontSize:12,marginBottom:8}} htmlFor="image-build">เลข Image / App build</label><input id="image-build" disabled={disabled || saving} value={value} maxLength={500} onChange={e=>setDraft(previous=>({value:e.target.value,base:previous?.base ?? initial}))} placeholder="เช่น web:release-001 หรือ App build 123" style={{width:'100%',padding:12,border:'1px solid #ccd7ea',borderRadius:6,color:'#334766'}}/><button className="primary-button" style={{marginTop:10}} disabled={disabled || saving || conflict || value.trim()===initial} onClick={()=>void save()}>{disabled?'กำลังอ่านข้อมูล...':saving?'กำลังบันทึก...':'บันทึก Image / Build'}</button>{conflict && <div role="alert"><p className="small-note">มีผู้แก้ไขข้อมูลล่าสุดแล้ว กรุณาโหลดค่าล่าสุดก่อนบันทึก เพื่อไม่เขียนทับข้อมูลของผู้อื่น</p><button className="primary-button" onClick={()=>{setDraft(null);setMessage('โหลดค่าล่าสุดแล้ว');}}>ใช้ค่าล่าสุด</button></div>}<p role="status" style={{marginTop:8,fontSize:11}}>{message}</p><p className="small-note">บันทึกใน Supabase แยกจาก timeline และไม่แก้ Google Sheet</p></div>;
+ return <div className="build-editor"><label htmlFor="image-build">เลข Image / App build</label><input id="image-build" disabled={disabled || saving} value={value} maxLength={500} onChange={e=>setDraft(previous=>({value:e.target.value,base:previous?.base ?? initial}))} placeholder="เช่น web:release-001 หรือ App build 123"/><label htmlFor="image-comment">Comment <small>ระบุว่า image นี้ใช้กับเรื่องอะไร</small></label><textarea id="image-comment" disabled={disabled || saving} value={comment} maxLength={1000} rows={3} onChange={e=>setComment(e.target.value)} placeholder="เช่น รวม IR Insurance phase 1 และแก้หน้า package"/><button className="primary-button" disabled={disabled || saving || conflict || !value.trim() || (value.trim()===initial && !comment.trim())} onClick={()=>void save()}>{disabled?'กำลังอ่านข้อมูล...':saving?'กำลังบันทึก...':'บันทึก Image / Build'}</button>{conflict && <div role="alert"><p className="small-note">มีผู้แก้ไขข้อมูลล่าสุดแล้ว กรุณาโหลดค่าล่าสุดก่อนบันทึก เพื่อไม่เขียนทับข้อมูลของผู้อื่น</p><button className="primary-button" onClick={()=>{setDraft(null);setMessage('โหลดค่าล่าสุดแล้ว');}}>ใช้ค่าล่าสุด</button></div>}<p role="status" className="build-message">{message}</p><p className="small-note">ทุกครั้งที่บันทึกจะเก็บเลข image, comment และเวลาไว้ในประวัติ โดยไม่แก้ Google Sheet</p></div>;
 }

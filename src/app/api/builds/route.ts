@@ -20,8 +20,8 @@ export async function POST(request: NextRequest) {
     if (text.length > 4096) return NextResponse.json({ error:'ข้อมูลใหญ่เกินขอบเขต' }, { status:413 });
     let body;
     try { body = JSON.parse(text); } catch { return NextResponse.json({error:'JSON ไม่ถูกต้อง'}, {status:400}); }
-    if (!body || typeof body.id !== 'string' || !body.id.trim() || body.id.length > 300 || body.id.includes('\0') || typeof body.image !== 'string' || body.image.length > 500 || body.image.includes('\0')) return NextResponse.json({ error: 'ข้อมูลไม่ถูกต้อง' }, { status: 400 });
-    await getBuildStore().save(body.id,body.image);
-    return NextResponse.json({ saved: true });
+    if (!body || typeof body.id !== 'string' || !body.id.trim() || body.id.length > 300 || body.id.includes('\0') || typeof body.image !== 'string' || !body.image.trim() || body.image.length > 500 || body.image.includes('\0') || typeof body.comment !== 'string' || body.comment.length > 1000 || body.comment.includes('\0')) return NextResponse.json({ error: 'ข้อมูลไม่ถูกต้อง' }, { status: 400 });
+    const record = await getBuildStore().save(body.id,body.image,body.comment);
+    return NextResponse.json({ saved: true, record });
   } catch { return NextResponse.json({ error: 'บันทึกลง Supabase ไม่สำเร็จ กรุณาลองใหม่' }, { status: 503 }); }
 }
