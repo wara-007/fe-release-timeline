@@ -46,4 +46,27 @@
 .release-status-editor>.primary-button{margin-top:10px}
 .release-status-editor>p{min-height:17px;margin-top:8px;color:#426a58;font-size:10px}
 .release-status-editor>small{display:block;color:#68768d;font-size:9px;line-height:1.7}
+.release-confirmed{display:flex;align-items:flex-end;flex-direction:column;gap:4px}
+.release-confirmed>small{font-size:7px;letter-spacing:.8px;color:#77849a}
+.operational-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px 10px;width:100%;margin:0 0 14px;padding:11px;border:1px solid #e3e8f1;border-radius:7px;background:#fafbfe}
+.operational-grid>span{display:flex;min-width:0;flex-direction:column;align-items:flex-start;gap:4px}
+.operational-grid>span>small{font-size:7px;letter-spacing:.7px;color:#748198}
+.operational-grid .timeline-health-row{grid-column:1/-1;padding-top:7px;border-top:1px solid #e5e9f0}
+.team-status{display:inline-flex;align-items:center;gap:4px;max-width:100%;padding:2px 5px;border:1px solid #e2e7ef;border-radius:4px;background:#f5f7fa;color:#66758c;font-size:8px;white-space:nowrap}
+.team-status>i{width:4px;height:4px;border-radius:50%;background:currentColor}
+.team-in_progress,.team-testing{color:#4168b1;background:#eef3ff;border-color:#dce6fa}
+.team-done,.team-passed{color:#3f7959;background:#eef8f2;border-color:#dbeee2}
+.team-failed,.team-blocked{color:#a64141;background:#fff0f0;border-color:#f3d7d7}
+.value-ready,.value-missing,.operational-grid b,.status-summary b{font-size:9px;font-weight:600}
+.value-ready{color:#397653}.value-missing{color:#a15c43}
+.health-on-track,.health-complete{color:#397653}.health-due{color:#9a6b22}.health-overdue{color:#b13d3d}.health-unknown{color:#68768d}
+.status-summary{display:flex;flex-direction:column;border:1px solid #dfe6f1;border-radius:8px;overflow:hidden}
+.status-summary>div{display:grid;grid-template-columns:105px minmax(100px,1fr);align-items:center;gap:5px 12px;padding:11px 13px;border-bottom:1px solid #e8ecf2;background:#fff}
+.status-summary>div:last-child{border-bottom:0}
+.status-summary>div>span{font-size:10px;font-weight:600;color:#405675}
+.status-summary>div>small{grid-column:2;font-size:8px;color:#718098}
+.release-status-editor{display:flex;flex-direction:column;gap:10px}
+.release-status-editor>label{display:grid;grid-template-columns:68px 1fr;align-items:center;gap:10px}
+.release-status-editor>label>span{font-size:10px;font-weight:600;color:#435876}
+.release-status-editor>.primary-button{align-self:flex-start;margin-top:2px}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}

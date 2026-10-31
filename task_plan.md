@@ -34,3 +34,10 @@ Regression tests added for release/feature saves, precedence, clearing and sourc
 - สถานะล่าสุดเก็บใน Supabase แยกจาก Google Sheets
 - การ์ด Release, readiness และตัวเลขพร้อมส่งต่อ SA ใช้สถานะล่าสุดจาก Supabase
 
+## 2026-10-31 — Separated operational statuses
+
+- แยก Release, Dev BE, Dev FE และ QA เป็นสถานะที่ผู้รับผิดชอบยืนยันคนละค่า
+- แยก Image / Build และ Timeline Health เป็นค่าที่ระบบคำนวณ ไม่ปะปนกับสถานะ Release
+- แสดงสถานะทุกกลุ่มบน Release card และอธิบายแหล่งข้อมูลใน Release details
+- Timeline Health ใช้วันจบ Dev FE จาก Sheet และไม่เปลี่ยน Done/Deployed อัตโนมัติ
+
