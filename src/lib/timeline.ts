@@ -164,6 +164,7 @@ export function buildReleases(features: Feature[]): Release[] {
       date: dates.at(-1) || null, features: items, images: [...new Set(items.map(f => f.image).filter(Boolean))],
       status: rollupStatus(items), stream: items.every(f => f.stream === items[0].stream) ? items[0].stream : '',
       explicit: !!items[0].releaseId, platform: platforms.size === 1 ? items[0].platform : platforms.has('shared') || (platforms.has('web') && platforms.has('app')) ? 'shared' : 'unknown',
+      tags: [...new Set(items.flatMap(item => item.platform === 'shared' ? ['web','app'] as const : item.platform === 'web' || item.platform === 'app' ? [item.platform] : []))],
     };
   }).sort((a, b) => (a.date || `${a.features[0].year}-12-31`).localeCompare(b.date || `${b.features[0].year}-12-31`) || a.features[0].sourceRow - b.features[0].sourceRow);
 }

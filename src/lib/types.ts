@@ -1,4 +1,5 @@
 export type Platform = 'web' | 'app' | 'shared' | 'unknown';
+export type ReleaseTag = 'web' | 'app' | 'be';
 export type Status = 'unknown' | 'planned' | 'merging' | 'testing' | 'done' | 'deployed';
 export type StageKind = 'dev' | 'qa' | 'integration' | 'cut' | 'preprod' | 'production' | 'release';
 export interface GridCell { col: number; text?: string; color?: string; note?: string }
@@ -12,7 +13,7 @@ export interface Feature {
 }
 export interface Release {
   id: string; name: string; date: string | null; features: Feature[]; images: string[];
-  status: Status; stream: string; explicit: boolean; platform: Platform;
+  status: Status; stream: string; explicit: boolean; platform: Platform; tags?: ReleaseTag[];
 }
 export interface TimelineData {
   features: Feature[]; releases: Release[];

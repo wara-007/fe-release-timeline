@@ -51,3 +51,23 @@ Regression tests added for release/feature saves, precedence, clearing and sourc
 - Migration `20261103090000_create_managed_releases.sql` ถูก apply แล้ว
 - ตามคำสั่งผู้ใช้ ไม่รัน Test หรือ Build ในรอบนี้
 
+## 2026-11-03 — Multi-tag Release artifacts
+
+- Release เลือก Tag `Web`, `App`, `BE` ได้มากกว่า 1 ค่า และเก็บ Tag ใน Supabase
+- แยกเลขส่งมอบเป็น Web image, App version/build และ BE image ตาม Tag ที่เลือก
+- แต่ละ Tag มีค่าล่าสุด ปุ่มคัดลอก Comment และ History แยกจากกัน
+- การ์ด Release แสดง Tag และเลขส่งมอบล่าสุดของแต่ละ Tag
+- Migration `20261103113000_add_release_tags.sql` ถูก apply และตรวจพบคอลัมน์ `tags` แล้ว
+- Google Sheets ยังคงเป็น read-only และตามคำสั่งผู้ใช้ ไม่รัน Test หรือ Build
+
+## 2026-11-03 — Unassigned features and deploy health
+
+- เพิ่มหน้า Unassigned features สำหรับงานที่ไม่มีวัน Deploy/Release และยังไม่ถูกเลือกเข้า managed Release
+- เพิ่ม/แก้ไข/Archive Feature นอก Sheet โดยเก็บใน Supabase พร้อมสถานะ Feature
+- Feature ที่สร้างจากเว็บสามารถเลือกเข้า Release และจะหายจากหน้า Unassigned
+- Release editor แสดงงานค้างจาก Unassigned เป็นตัวเลือกหลัก พร้อมสมาชิกเดิมของ Release ขณะแก้ไข
+- งานที่อยู่ใน Release อื่นแสดงแบบ disabled และย้ายข้าม Release ได้หลัง confirmation
+- Release card ใช้ countdown จากวัน Release; งานใน Release แสดง overdue แยกแต่ละ Feature จนเป็น Deployed
+- Apply migrations `20261103140000_create_managed_features.sql` และ `20261103141000_add_managed_feature_status.sql` แล้ว
+- Google Sheets ยังคงเป็น read-only และตามคำสั่งผู้ใช้ ไม่รัน Test หรือ Build
+
