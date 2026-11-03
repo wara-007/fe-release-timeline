@@ -41,3 +41,13 @@ Regression tests added for release/feature saves, precedence, clearing and sourc
 - แสดงสถานะทุกกลุ่มบน Release card และอธิบายแหล่งข้อมูลใน Release details
 - Timeline Health ใช้วันจบ Dev FE จาก Sheet และไม่เปลี่ยน Done/Deployed อัตโนมัติ
 
+## 2026-11-03 — Hybrid Release Management
+
+- เพิ่มและแก้ไข Release จากหน้า Release board โดยเก็บใน Supabase
+- เลือกสมาชิกจากงานใน Sheet และเพิ่มงานนอก Sheet พร้อมช่วง Dev FE/QA ได้
+- Release จาก Sheet ใช้ override โดยไม่เขียนกลับ Google Sheets
+- งาน custom ถูกนำไปแสดงร่วมใน Release card, details และ Timeline
+- ใช้ Archive แทน hard delete
+- Migration `20261103090000_create_managed_releases.sql` ถูก apply แล้ว
+- ตามคำสั่งผู้ใช้ ไม่รัน Test หรือ Build ในรอบนี้
+

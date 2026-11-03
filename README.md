@@ -113,3 +113,11 @@ Migration ที่ apply จริง: `supabase/migrations/20261030081417_crea
 ## Repository data policy
 
 สำเนาชีต `src/data/sheet-snapshot.json` เก็บเฉพาะบนเครื่อง ไม่รวมใน Git หรือประวัติที่ push ขึ้น repository public แอปอ่านชีตสดได้ตามเดิม หากต้องการ fallback บนเครื่อง ให้รัน `npm run snapshot:update` ไฟล์ที่สร้างจะถูก ignore อัตโนมัติ หากอ่านสดไม่ได้และไม่มี fallback เว็บจะแสดงข้อผิดพลาดแทนการแสดงข้อมูลสมมุติ
+# Release ownership
+
+- Google Sheets เป็นแหล่งข้อมูล Timeline แบบ read-only เว็บไม่เขียนกลับ Sheet
+- Release ที่สร้างหรือแก้ไขใน Release room เก็บใน Supabase
+- Release สามารถเลือกงานจาก Sheet และเพิ่มงานนอก Sheet ได้ในรอบเดียวกัน
+- งานจาก Sheet แสดงป้าย `From Sheet`, งานที่เพิ่มเองแสดง `Web added`, และ Release ที่ override แสดง `Edited in Release room`
+- การ Archive จะซ่อน Release แต่ไม่ลบข้อมูลออกจาก Supabase
+
